@@ -9,9 +9,10 @@ const X_TITLE = "viniciusdev";
 const MODEL = "x-ai/grok-4-fast:free";
 
 export async function POST(req: Request) {
+  const body = await req.json();
+  const { messageHistory } = body;
+
   try {
-    const body = await req.json();
-    const { messageHistory } = body;
 
     const messages = [
       ...systemPrompt,
