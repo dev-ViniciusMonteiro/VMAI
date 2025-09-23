@@ -6,23 +6,17 @@ const API_URL = "https://openrouter.ai/api/v1/chat/completions";
 const API_KEY = process.env.OPENROUTER_API_KEY!;
 const HTTP_REFERER = "https://www.vmai.com.br/";
 const X_TITLE = "viniciusdev";
-const MODEL = "openai/gpt-4.1-nano";
+const MODEL = "x-ai/grok-4-fast:free";
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { messageHistory } = body;
 
-    const context = messageHistory
-      .slice(-5) // Get only the last 5 messages
-      .map((msg: { role: string; content: string }, index: number) => `Mensagem ${index + 1} (${msg.role}): ${msg.content}`)
-      .join("\n");
-
-    systemPrompt.push({
-      role: "user",
-      content: `Histórico de mensagens para contexto:\n\n${context}\n\nAgora, responda à última mensagem ou informação apenas (sempre responde sobre vinicius).`
-    })
-
+    const messages = [
+      ...systemPrompt,
+      ...messageHistory.slice(-5)
+    ];
 
     const response = await fetch(API_URL, {
       method: "POST",
@@ -34,7 +28,7 @@ export async function POST(req: Request) {
       },
       body: JSON.stringify({
         model: MODEL,
-        messages: systemPrompt,
+        messages: messages,
         temperature: 0.7, // Aumenta a aleatoriedade das respostas
         max_tokens: 700, // Limite de tokens para a resposta
         top_p: 1, // isso ajuda a evitar respostas repetitivas
@@ -52,6 +46,11 @@ export async function POST(req: Request) {
   } catch {
     try {
       // Fallback to the contingency model
+      const fallbackMessages = [
+        ...systemPrompt,
+        ...messageHistory.slice(-5)
+      ];
+      
       const fallbackResponse = await fetch(API_URL, {
         method: "POST",
         headers: {
@@ -61,8 +60,8 @@ export async function POST(req: Request) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "deepseek/deepseek-r1:free",
-          messages: systemPrompt,
+          model: "openai/gpt-4.1-nano",
+          messages: fallbackMessages,
         }),
       });
 
