@@ -24,8 +24,9 @@ const Chat = () => {
         const raw = sessionStorage.getItem(STORAGE_KEY);
         if (raw) return JSON.parse(raw) as ChatMessage[];
       }
-    } catch (e) {
+    } catch (err) {
       // ignore parse errors
+      void err;
     }
     return [{ role: "assistant", content: welcomeMessage }];
   });
@@ -35,8 +36,9 @@ const Chat = () => {
       if (typeof window !== "undefined") {
         sessionStorage.setItem(STORAGE_KEY, JSON.stringify(history));
       }
-    } catch (e) {
+    } catch (err) {
       // ignore storage errors
+      void err;
     }
   }, [history]);
 
