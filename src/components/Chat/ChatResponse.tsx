@@ -12,7 +12,7 @@ const ChatResponse = ({
 }: {
   history: ChatMessage[];
   loading: boolean;
-  messageListRef?: React.RefObject<HTMLDivElement>;
+  messageListRef?: React.RefObject<HTMLDivElement | null>;
 }) => {
   const formatResponse = (text: string) => {
     const formattedText = text

@@ -18,18 +18,26 @@ const Chat = () => {
 
   const [userInput, setUserInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [history, setHistory] = useState<ChatMessage[]>(() => {
+  const [history, setHistory] = useState<ChatMessage[]>([
+    { role: "assistant", content: welcomeMessage },
+  ]);
+
+  useEffect(() => {
     try {
       if (typeof window !== "undefined") {
         const raw = sessionStorage.getItem(STORAGE_KEY);
-        if (raw) return JSON.parse(raw) as ChatMessage[];
+        if (raw) {
+          const parsed = JSON.parse(raw) as ChatMessage[];
+          if (parsed.length > 0) {
+            setHistory(parsed);
+          }
+        }
       }
     } catch (err) {
       // ignore parse errors
       void err;
     }
-    return [{ role: "assistant", content: welcomeMessage }];
-  });
+  }, []);
 
   useEffect(() => {
     try {
@@ -59,7 +67,7 @@ const Chat = () => {
     if (!message) return;
 
     const updatedHistory = [...history, { role: "user", content: message }];
-    setHistory(updatedHistory);
+    setHistory(updatedHistory as ChatMessage[]);
     setUserInput("");
     setLoading(true);
 
@@ -70,21 +78,29 @@ const Chat = () => {
         body: JSON.stringify({ messageHistory: updatedHistory }),
       });
 
-      const data = await res.json();
+      let data: { result?: string; error?: string } | null = null;
+
+      try {
+        data = await res.json();
+      } catch {
+        const fallbackText = await res.text().catch(() => "");
+        data = { result: fallbackText || "⚠️ Sem resposta da IA." };
+      }
+
       setHistory([
         ...updatedHistory,
         {
           role: "assistant",
-          content: data.result || "⚠️ Sem resposta da IA.",
+          content: data?.result || data?.error || "⚠️ Sem resposta da IA.",
         },
-      ]);
+      ] as ChatMessage[]);
     } catch (err: unknown) {
       const errorMessage =
         err instanceof Error
           ? `Erro: ${err.message}`
           : "Erro: Ocorreu um erro desconhecido.";
 
-      setHistory([...updatedHistory, { role: "assistant", content: errorMessage }]);
+      setHistory([...updatedHistory, { role: "assistant", content: errorMessage }] as ChatMessage[]);
     } finally {
       setLoading(false);
     }

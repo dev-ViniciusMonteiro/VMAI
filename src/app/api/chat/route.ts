@@ -8,15 +8,24 @@ const HTTP_REFERER = "https://www.vmai.com.br/";
 const X_TITLE = "viniciusdev";
 const MODEL = "x-ai/grok-4-fast:free";
 
+type OpenRouterResponse = {
+  choices?: Array<{
+    message?: {
+      content?: string;
+    };
+  }>;
+};
+
 export async function POST(req: Request) {
   const body = await req.json();
   const { messageHistory } = body;
 
   try {
 
+    const recentHistory = messageHistory.slice(-4);
     const messages = [
       ...systemPrompt,
-      ...messageHistory.slice(-5)
+      ...recentHistory
     ];
 
     const response = await fetch(API_URL, {
@@ -37,19 +46,29 @@ export async function POST(req: Request) {
     });
 
     if (!response.ok) {
-      throw new Error("Primary model failed");
+      const errorText = await response.text();
+      throw new Error(errorText || "Primary model failed");
     }
 
-    const data = await response.json();
+    const responseText = await response.text();
+    let data: OpenRouterResponse | null = null;
+
+    try {
+      data = responseText ? JSON.parse(responseText) : null;
+    } catch {
+      return NextResponse.json({ result: responseText || "Erro, sem resposta!" });
+    }
+
     const result = data?.choices?.[0]?.message?.content || "Erro, sem resposta!";
 
     return NextResponse.json({ result });
   } catch {
     try {
       // Fallback to the contingency model
+      const fallbackRecentHistory = messageHistory.slice(-4);
       const fallbackMessages = [
         ...systemPrompt,
-        ...messageHistory.slice(-5)
+        ...fallbackRecentHistory
       ];
       
       const fallbackResponse = await fetch(API_URL, {
@@ -67,10 +86,19 @@ export async function POST(req: Request) {
       });
 
       if (!fallbackResponse.ok) {
-        throw new Error("Contingency model also failed");
+        const fallbackErrorText = await fallbackResponse.text();
+        throw new Error(fallbackErrorText || "Contingency model also failed");
       }
 
-      const fallbackData = await fallbackResponse.json();
+      const fallbackText = await fallbackResponse.text();
+      let fallbackData: OpenRouterResponse | null = null;
+
+      try {
+        fallbackData = fallbackText ? JSON.parse(fallbackText) : null;
+      } catch {
+        return NextResponse.json({ result: fallbackText || "Erro, sem resposta!" });
+      }
+
       const fallbackResult = fallbackData?.choices?.[0]?.message?.content || "Erro, sem resposta!";
 
       return NextResponse.json({ result: fallbackResult });
