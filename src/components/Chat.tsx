@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import BackgroundImage from "./Chat/BackgroundImage";
 import ChatInput from "./Chat/ChatInput";
 import ChatResponse from "./Chat/ChatResponse";
+import QuickSuggestions from "./Chat/QuickSuggestions";
 import "../styles/home.css";
 
 type ChatMessage = {
@@ -62,8 +63,8 @@ const Chat = () => {
     });
   }, [history]);
 
-  const sendMessage = async () => {
-    const message = userInput.trim();
+  const sendMessage = async (messageOverride?: string) => {
+    const message = (messageOverride ?? userInput).trim();
     if (!message) return;
 
     const updatedHistory = [...history, { role: "user", content: message }];
@@ -122,10 +123,13 @@ const Chat = () => {
             <div className="whatsapp-right">⚙️</div>
           </div>
           <ChatResponse history={history} loading={loading} messageListRef={messageListRef} />
+          {!loading && history.length <= 1 && (
+            <QuickSuggestions onSelect={(value) => sendMessage(value)} />
+          )}
           <ChatInput
             userInput={userInput}
             setUserInput={setUserInput}
-            sendMessage={sendMessage}
+            sendMessage={() => sendMessage()}
             loading={loading}
           />
         </div>
